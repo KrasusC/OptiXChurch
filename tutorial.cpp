@@ -406,7 +406,7 @@ void Tutorial::createGeometry()
 
   // Create GIs for each piece of geometry
   std::vector<GeometryInstance> gis;
-  gis.push_back( m_context->createGeometryInstance( box, &box_matl, &box_matl+1 ) );
+  //gis.push_back( m_context->createGeometryInstance( box, &box_matl, &box_matl+1 ) );
   gis.push_back( m_context->createGeometryInstance( parallelogram, &floor_matl, &floor_matl+1 ) );
   if(chull.get())
     gis.push_back( m_context->createGeometryInstance( chull, &glass_matl, &glass_matl+1 ) );
@@ -417,13 +417,13 @@ void Tutorial::createGeometry()
   GeometryGroup geometrygroup = m_context->createGeometryGroup(); 
   geometrygroup->setChildCount(static_cast<unsigned int>(gis.size()));// +static_cast<unsigned int>(geometrygroup->getChildCount()));
   geometrygroup->setChild(0, gis[0]);// ->setChild(1, gis[0]);
-  geometrygroup->setChild(1, gis[1]);
+  //geometrygroup->setChild(1, gis[1]);
   if(chull.get())
 	  geometrygroup->setChild(2, gis[2]);
   geometrygroup->setAcceleration( m_context->createAcceleration("NoAccel","NoAccel") );
-  printf("GG = %d\n", geometrygroup->getChildCount());
+  //printf("GG = %d\n", geometrygroup->getChildCount());
 
-  std::string objPath = "F:/NVIDIA Corporation/OptiX SDK 3.9.0/SDK/tutorial/lucy.obj";
+  std::string objPath = "./data/lucy.obj";
   //GeometryGroup churchGroup = m_context->createGeometryGroup();
   Model church(objPath, box_matl, m_accel_desc, NULL, NULL, m_context, static_cast<GeometryGroup>(NULL));
   

@@ -34,16 +34,16 @@ Model::Model(std::string &objfilename, optix::Material matl, AccelDescriptor& ac
 		OptiXMesh FishLoader(context, m_geom_group, matl, accel_desc);
 
 		float m[16] = {
-			0, -1, 0, 0,
+			1, 0, 0, 0,
+			0, 1, 0, 0,
 			0, 0, 1, 0,
-			-1, 0, 0, 0,
 			0, 0, 0, 1
 		};
 		Matrix4x4 Rot(m);
 		Matrix4x4 XForm = Rot;
 		//XForm = Matrix4x4::scale(make_float3(1.0f / m_species->sizeInModel)) * XForm;
-		XForm = Matrix4x4::translate(make_float3(0, 0, 0)) * XForm;
-		XForm = Matrix4x4::rotate(1, make_float3(1, 0, 0)) * XForm;
+		XForm = Matrix4x4::translate(make_float3(0, 15.4, 0)) * XForm;
+		//XForm = Matrix4x4::rotate(1, make_float3(1, 0, 0)) * XForm;
 		//XForm = Matrix4x4::scale(make_float3(m_species->lengthMeters)) * XForm;
 
 		FishLoader.setLoadingTransform(XForm);
