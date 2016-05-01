@@ -27,7 +27,6 @@ if(GLUT_FOUND AND OPENGL_FOUND)
   OPTIX_add_sample_executable( tutorial
 	model.cpp
 	model.h
-    helpers.h
     tutorial.cpp
     tutorial.h
     tutorial0.cu
