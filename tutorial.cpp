@@ -403,14 +403,15 @@ void Tutorial::createGeometry()
   //printf("GG = %d\n", geometrygroup->getChildCount());
 
   vector<Material> church_matls(m_church_parts_name.size());
-  Program church_ch = m_context->createProgramFromPTXFile( m_ptx_path, floor_chname );
-  Program church_ah = m_context->createProgramFromPTXFile( m_ptx_path, "any_hit_shadow" );
+  string churchPtxPath = ptxpath("tutorial", "church.cu");
+  Program church_ch = m_context->createProgramFromPTXFile( churchPtxPath, "closest_hit_radiance" );
+  Program church_ah = m_context->createProgramFromPTXFile( churchPtxPath, "any_hit_shadow" );
 
   for (int i=0; i<m_church_parts_name.size(); ++i)
   {
     church_matls[i] = m_context->createMaterial();
-    church_matls[i] -> setClosestHitProgram(0, church_ch);
-    church_matls[i] -> setAnyHitProgram( 1, church_ah );
+    church_matls[i]->setClosestHitProgram( 0, church_ch );
+    church_matls[i]->setAnyHitProgram( 1, church_ah );
   }
   /*
   floor_matl["Ka"]->setFloat( 0.3f, 0.3f, 0.1f );

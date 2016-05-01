@@ -27,6 +27,7 @@ if(GLUT_FOUND AND OPENGL_FOUND)
   OPTIX_add_sample_executable( tutorial
 	model.cpp
 	model.h
+    helpers.h
     tutorial.cpp
     tutorial.h
     tutorial0.cu
@@ -42,6 +43,7 @@ if(GLUT_FOUND AND OPENGL_FOUND)
     tutorial10.cu
     tutorial11.cu
 	glChurch.cu
+    church.cu
     # These files are common among multiple samples
     box.cu
     commonStructs.h
