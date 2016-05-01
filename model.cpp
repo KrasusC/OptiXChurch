@@ -10,7 +10,7 @@
 
 using namespace optix;
 
-Model::Model(std::string &objfilename, optix::Material matl, AccelDescriptor& accel_desc, optix::TextureSampler projectedTexSamp, optix::Program intersectProgram,
+Model::Model(std::string &objfilename,const optix::Material matl, AccelDescriptor& accel_desc, optix::TextureSampler projectedTexSamp, optix::Program intersectProgram,
 	optix::Context context, optix::GeometryGroup inGG) : m_geom_group(inGG), m_this_owns_geom_group(false)
 {
 	static bool printedPermissions = false;
@@ -41,10 +41,7 @@ Model::Model(std::string &objfilename, optix::Material matl, AccelDescriptor& ac
 		};
 		Matrix4x4 Rot(m);
 		Matrix4x4 XForm = Rot;
-		//XForm = Matrix4x4::scale(make_float3(1.0f / m_species->sizeInModel)) * XForm;
 		XForm = Matrix4x4::translate(make_float3(0, 15.4, 0)) * XForm;
-		//XForm = Matrix4x4::rotate(1, make_float3(1, 0, 0)) * XForm;
-		//XForm = Matrix4x4::scale(make_float3(m_species->lengthMeters)) * XForm;
 
 		FishLoader.setLoadingTransform(XForm);
 		if (intersectProgram)
@@ -55,15 +52,12 @@ Model::Model(std::string &objfilename, optix::Material matl, AccelDescriptor& ac
 
 		m_aabb = FishLoader.getSceneBBox();
 
-		// Set the material properties that differ between the fish and the other scene elements
-		for (unsigned int i = 0; i < m_geom_group->getChildCount(); ++i) {
-			GI = m_geom_group->getChild(i);
-			if (projectedTexSamp)
-				GI["caustic_map"]->setTextureSampler(projectedTexSamp);
-			GI["diffuse_map_scale"]->setFloat(1.0f);
-			GI["emission_color"]->setFloat(0);
-			GI["Kr"]->setFloat(0);
-		}
+		GI = m_geom_group->getChild(0);
+		if (projectedTexSamp)
+			GI["caustic_map"]->setTextureSampler(projectedTexSamp);
+		GI["diffuse_map_scale"]->setFloat(1.0f);
+		GI["emission_color"]->setFloat(0);
+		GI["Kr"]->setFloat(0);
 	}
 	else {
 		GI = m_geom_group->getChild(0);

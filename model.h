@@ -8,6 +8,7 @@
 class Model
 {
 public:
+	Model(){};
 	Model(std::string &objfilename, optix::Material matl, AccelDescriptor& accel_desc, optix::TextureSampler projectedTexSamp,
 		optix::Program intersectProgram, optix::Context context, optix::GeometryGroup inGG);
 

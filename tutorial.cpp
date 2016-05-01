@@ -21,23 +21,9 @@
 
 //-------------------------------------------------------------------------------
 //
-//  tutorial
+//  OptiX Church
 //
 //-------------------------------------------------------------------------------
-
-// 0 - normal shader
-// 1 - lambertian
-// 2 - specular
-// 3 - shadows
-// 4 - reflections
-// 5 - miss
-// 6 - schlick
-// 7 - procedural texture on floor
-// 8 - LGRustyMetal
-// 9 - intersection
-// 10 - anyhit
-// 11 - camera
-
 
 #include <optixu/optixpp_namespace.h>
 #include <optixu/optixu_math_namespace.h>
@@ -49,11 +35,13 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
+#include <fstream>
 #include <string>
 #include <math.h>
 #include "model.h"
 
 using namespace optix;
+using namespace std;
 
 static float rand_range(float min, float max)
 {
@@ -71,14 +59,16 @@ class Tutorial : public SampleScene
 {
 public:
   Tutorial(int tutnum, const std::string& texture_path)
-    : SampleScene(), m_tutnum(tutnum), m_width(1080u), m_height(720u), texture_path( texture_path )
-  {}
+          : SampleScene(), m_tutnum(tutnum), m_width(1080u), m_height(720u), texture_path( texture_path ) {}
   
   // From SampleScene
   void   initScene( InitialCameraData& camera_data );
+
   void   trace( const RayGenCameraData& camera_data );
   void   doResize( unsigned int width, unsigned int height );
   void   setDimensions( const unsigned int w, const unsigned int h ) { m_width = w; m_height = h; }
+  int    loadObjConfig(const string& filename);
+
   Buffer getOutputBuffer();
 
 private:
@@ -88,13 +78,34 @@ private:
   unsigned int m_tutnum;
   unsigned int m_width;
   unsigned int m_height;
-  std::string   texture_path;
+  std::vector<string> m_church_parts_name;
+  std::string  texture_path;
   std::string  m_ptx_path;
 };
 
+int Tutorial::loadObjConfig(const string &filename)
+{
+  fstream input;
+  input.open(filename);
+  if (!input)
+  {
+    cout<<"Failed to open config file "<<filename<<endl;
+    return -1;
+  };
+  string part_name;
+  m_church_parts_name.clear();
+  while (!input.eof())
+  {
+    input>>part_name;
+    m_church_parts_name.push_back(part_name);
+  }
+  return 0;
+}
 
 void Tutorial::initScene( InitialCameraData& camera_data )
 {
+  // split church into parts, need a config file to load back in
+  if (loadObjConfig("./data/churchdata/config.txt") == -1) return;
   // set up path to ptx file associated with tutorial number
   std::stringstream ss;
   ss << "tutorial" << m_tutnum << ".cu";
@@ -260,37 +271,8 @@ void Tutorial::createGeometry()
   box["boxmin"]->setFloat( -2.0f, 0.0f, -2.0f );
   box["boxmax"]->setFloat(  2.0f, 7.0f,  2.0f );
 
-  // Create chull
+  // Chull(don't know what) deleted here
   Geometry chull = 0;
-  if(m_tutnum >= 9){
-    chull = m_context->createGeometry();
-    chull->setPrimitiveCount( 1u );
-    chull->setBoundingBoxProgram( m_context->createProgramFromPTXFile( m_ptx_path, "chull_bounds" ) );
-    chull->setIntersectionProgram( m_context->createProgramFromPTXFile( m_ptx_path, "chull_intersect" ) );
-    Buffer plane_buffer = m_context->createBuffer(RT_BUFFER_INPUT);
-    plane_buffer->setFormat(RT_FORMAT_FLOAT4);
-    int nsides = 6;
-    plane_buffer->setSize( nsides + 2 );
-    float4* chplane = (float4*)plane_buffer->map();
-    float radius = 1;
-    float3 xlate = make_float3(-1.4f, 0, -3.7f);
-
-    for(int i = 0; i < nsides; i++){
-      float angle = float(i)/float(nsides) * M_PIf * 2.0f;
-      float x = cos(angle);
-      float y = sin(angle);
-      chplane[i] = make_plane( make_float3(x, 0, y), make_float3(x*radius, 0, y*radius) + xlate);
-    }
-    float min = 0.02f;
-    float max = 3.5f;
-    chplane[nsides + 0] = make_plane( make_float3(0, -1, 0), make_float3(0, min, 0) + xlate);
-    float angle = 5.f/nsides * M_PIf * 2;
-    chplane[nsides + 1] = make_plane( make_float3(cos(angle),  .7f, sin(angle)), make_float3(0, max, 0) + xlate);
-    plane_buffer->unmap();
-    chull["planes"]->setBuffer(plane_buffer);
-    chull["chull_bbmin"]->setFloat(-radius + xlate.x, min + xlate.y, -radius + xlate.z);
-    chull["chull_bbmax"]->setFloat( radius + xlate.x, max + xlate.y,  radius + xlate.z);
-  }
 
   // Floor geometry
   std::string pgram_ptx( ptxpath( "tutorial", "parallelogram.cu" ) );
@@ -408,9 +390,7 @@ void Tutorial::createGeometry()
   std::vector<GeometryInstance> gis;
   //gis.push_back( m_context->createGeometryInstance( box, &box_matl, &box_matl+1 ) );
   gis.push_back( m_context->createGeometryInstance( parallelogram, &floor_matl, &floor_matl+1 ) );
-  if(chull.get())
-    gis.push_back( m_context->createGeometryInstance( chull, &glass_matl, &glass_matl+1 ) );
-  
+
   // Place all in group
   Group TopGroup = m_context->createGroup();
 
@@ -418,24 +398,53 @@ void Tutorial::createGeometry()
   geometrygroup->setChildCount(static_cast<unsigned int>(gis.size()));// +static_cast<unsigned int>(geometrygroup->getChildCount()));
   geometrygroup->setChild(0, gis[0]);// ->setChild(1, gis[0]);
   //geometrygroup->setChild(1, gis[1]);
-  if(chull.get())
-	  geometrygroup->setChild(2, gis[2]);
+
   geometrygroup->setAcceleration( m_context->createAcceleration("NoAccel","NoAccel") );
   //printf("GG = %d\n", geometrygroup->getChildCount());
 
-  std::string objPath = "./data/lucy.obj";
-  //GeometryGroup churchGroup = m_context->createGeometryGroup();
-  Model church(objPath, box_matl, m_accel_desc, NULL, NULL, m_context, static_cast<GeometryGroup>(NULL));
-  
+  vector<Material> church_matls(m_church_parts_name.size());
+  Program church_ch = m_context->createProgramFromPTXFile( m_ptx_path, floor_chname );
+  Program church_ah = m_context->createProgramFromPTXFile( m_ptx_path, "any_hit_shadow" );
 
-  TopGroup->setChildCount(2);
-  TopGroup->setChild(0, church.m_tran);
-  TopGroup->setChild(1, geometrygroup);
+  for (int i=0; i<m_church_parts_name.size(); ++i)
+  {
+    church_matls[i] = m_context->createMaterial();
+    church_matls[i] -> setClosestHitProgram(0, church_ch);
+    church_matls[i] -> setAnyHitProgram( 1, church_ah );
+  }
+  /*
+  floor_matl["Ka"]->setFloat( 0.3f, 0.3f, 0.1f );
+  floor_matl["Kd"]->setFloat( 194/255.f*.6f, 186/255.f*.6f, 151/255.f*.6f );
+  floor_matl["Ks"]->setFloat( 0.4f, 0.4f, 0.4f );
+  floor_matl["reflectivity"]->setFloat( 0.1f, 0.1f, 0.1f );
+  floor_matl["reflectivity_n"]->setFloat( 0.05f, 0.05f, 0.05f );
+  floor_matl["phong_exp"]->setFloat( 88 );
+  floor_matl["tile_v0"]->setFloat( 0.25f, 0, .15f );
+  floor_matl["tile_v1"]->setFloat( -.15f, 0, 0.25f );
+  floor_matl["crack_color"]->setFloat( 0.1f, 0.1f, 0.1f );
+  floor_matl["crack_width"]->setFloat( 0.02f );
+*/
+  std::string objPathPrefix = "./data/churchdata/";
+  //GeometryGroup churchGroup = m_context->createGeometryGroup();
+  //Model church(objPath, floor_matl, m_accel_desc, NULL, NULL, m_context, static_cast<GeometryGroup>(NULL));
+  vector<Model> church_parts(m_church_parts_name.size());
+
+  for (int i=0; i<m_church_parts_name.size(); ++i)
+  {
+    string objPath = objPathPrefix + m_church_parts_name[i] + ".obj";
+    church_parts[i] = Model(objPath, church_matls[i], m_accel_desc, NULL, NULL, m_context,
+                            i ? church_parts.back().m_geom_group : static_cast<GeometryGroup>(NULL));
+  }
+
+  TopGroup->setChildCount(m_church_parts_name.size()+1);
+  TopGroup->setChild(0, geometrygroup);
+  //TopGroup->setChild(1, church_parts[0].m_geom_group);
+  for (int i=0; i<m_church_parts_name.size(); ++i)
+    TopGroup->setChild(i+1, church_parts[i].m_tran);
   TopGroup->setAcceleration(m_context->createAcceleration("MedianBvh", "Bvh"));
 
   m_context["top_object"]->set(TopGroup);
   m_context["top_shadower"]->set(TopGroup);
-
   
 }
 
@@ -508,7 +517,7 @@ int main( int argc, char** argv )
   }
 
   std::stringstream title;
-  title << "Tutorial " << tutnum;
+  title << "Church";
   try {
     Tutorial scene(tutnum, texture_path);
     scene.setDimensions( width, height );
